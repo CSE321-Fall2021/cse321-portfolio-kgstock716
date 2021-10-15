@@ -19,7 +19,7 @@ Required Materials
 -Keypad 
 -LCD 
 -4 external LEDs 
--Resistors 
+-6 Resistors 
 -Breadboard 
 
 --------------------
@@ -40,7 +40,7 @@ This file implements all subproblems of the count-down alarm system. Currently, 
 ----------
 Things Declared
 ----------
-volatile int x which is currently used for testing ISRs.
+volatile char x which is currently used for testing ISRs.
 int row counter.
 int accumulator for the timer value.
 4 InterruptIn: one for each column of the keypad using pins PC8-11.
