@@ -13,14 +13,14 @@ Features
 --------------------
 Required Materials
 --------------------
--Nucleo L4R5ZI
--USB cable
--Jumpers
--Keypad
--LCD
--4 external LEDs
--Resistors
--Breadboard
+-Nucleo L4R5ZI \\
+-USB cable \\
+-Jumpers \\
+-Keypad \\
+-LCD \\
+-4 external LEDs \\
+-Resistors \\ 
+-Breadboard \\ 
 
 --------------------
 Resources and References
