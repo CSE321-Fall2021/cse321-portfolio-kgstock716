@@ -56,8 +56,8 @@ Interrupt API -- InterruptIn, .rise()
 Custom Functions
 ----------
 Void ISR functions mentioned above:
-void isr_c1(void)
-void isr_c2(void)
-void isr_c3(void)
-void isr_c4(void)
+void isr_c1(void), 
+void isr_c2(void), 
+void isr_c3(void), 
+void isr_c4(void). 
 These currently only have testing values and basic conditionals set up to determine key value based on the value in row.
