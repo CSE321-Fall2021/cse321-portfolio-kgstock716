@@ -16,7 +16,15 @@
 #include "mbed.h"
 #include "1802.h"
 #include <iterator>
-#include "cstdio"
+
+// 10/21 Updates:
+// Added LCD and read LCD documentation, need to test functionality
+// Learned propper connections for keypad
+
+//TODO:
+//Test LCD
+//Add ticker for timer
+
 
 volatile char x;
 int row = 0; 
@@ -37,11 +45,12 @@ void isr_c3(void);
 void isr_c4(void);
 
 //establish LCD
-//CSE321_LCD lcd(); 
+CSE321_LCD lcd(16, 2, LCD_5x8DOTS, PB_8, PB_9); 
 
 // main() runs in its own thread in the OS
 int main()
 {
+    lcd.begin(); //start LCD
     RCC->AHB2ENR |= 0x8; //using port D for LEDs, PD4, 5, 6, 7
     GPIOD->MODER |= 0x5500; //set 1s at -- 0101 0101 0000 0000
     GPIOD->MODER &= ~(0xAA00); //set 0s at -- 1010 1010 0000 0000
@@ -115,6 +124,8 @@ void isr_c2(void){
     if (row == 1){
         //3
         x = '3';
+        lcd.clear();
+        lcd.print("hi!");
     }else if(row == 2){
         //6
         x = '6';
