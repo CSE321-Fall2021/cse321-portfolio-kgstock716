@@ -17,26 +17,29 @@
 #include "1802.h"
 #include <iterator>
 
-// 10/21 Updates:
-// Added LCD and read LCD documentation, need to test functionality
-// Learned propper connections for keypad
+// 10/28 Updates:
+// ticker set up and lcd tested
 
 //TODO:
-//Test LCD
-//Add ticker for timer
+//set up event queues to work with lcd modifications on each second change
+//put everything together
+//make sure isr is doing what is specified by the button
+//building time
+//A, B, D functionality
 
 
 volatile char x;
+volatile int i = 0;
 int row = 0; 
 int accumulator = 0;
 
 
 //Establish one interrupt for each column we're reading from, use PC 8, 9, 10, 11
 
-InterruptIn column1(PC_8); 
-InterruptIn column2(PC_9);
-InterruptIn column3(PC_10);
-InterruptIn column4(PC_11);
+InterruptIn column1(PC_8, PullDown); 
+InterruptIn column2(PC_9, PullDown);
+InterruptIn column3(PC_10, PullDown);
+InterruptIn column4(PC_11, PullDown);
 
 //Establish an isr for each column interrupt to use
 void isr_c1(void);
@@ -44,13 +47,19 @@ void isr_c2(void);
 void isr_c3(void);
 void isr_c4(void);
 
-//establish LCD
-CSE321_LCD lcd(16, 2, LCD_5x8DOTS, PB_8, PB_9); 
+//establish function called to decrement and print time on each second
+void decrement(void);
+
+//establish LCD, 16 columns, 2 rows, PB_9 SDA, PB_8 SCL
+CSE321_LCD lcd(16, 2, LCD_5x8DOTS, PB_9, PB_8); 
+
+//establish ticker for timing piece
+Ticker t;
 
 // main() runs in its own thread in the OS
 int main()
 {
-    lcd.begin(); //start LCD
+    
     RCC->AHB2ENR |= 0x8; //using port D for LEDs, PD4, 5, 6, 7
     GPIOD->MODER |= 0x5500; //set 1s at -- 0101 0101 0000 0000
     GPIOD->MODER &= ~(0xAA00); //set 0s at -- 1010 1010 0000 0000
@@ -58,6 +67,14 @@ int main()
     RCC->AHB2ENR |= 0x20;
     GPIOF->MODER |= 0x4400; 
     GPIOF->MODER &= ~(0x8800);
+
+    lcd.begin(); //start LCD
+    //set beginning state
+    lcd.clear(); 
+    lcd.setCursor(0, 0);
+    //prompt user to input time
+    lcd.print("Enter Time");
+    t.attach(&decrement, 1);
 
 
     //when key is pressed and lifted (rising edge), trigger isr for corresponding column
@@ -92,12 +109,9 @@ int main()
             GPIOD->ODR &= ~(0x20);
             GPIOD->ODR &= ~(0x40); 
         }
-        // row = row + 1;
-        // row %= 4;
         row = row + 1;
         row %= 4;
-        //print used to check ISR for rows and columns
-        printf("%c\n", x);
+        thread_sleep_for(500); //account for bounce by waiting 1/2 second
     }
 
     return 0;
@@ -107,25 +121,23 @@ void isr_c1(void){
     if (row == 1){
         //A
         x = 'A';
+        //start timer
+        
     }else if(row == 2){
         //B
         x = 'B';
+        //pause the timer
     }else if(row == 0){
         //D
         x = 'D';
-    }else if(row == 3){
-        //C -- extra credit. Otherwise, does nothing
-        x = 'C';
+        //input time
     }
-    //might add in condition for row ==  if using C for extra credit
 }
 
 void isr_c2(void){
     if (row == 1){
         //3
         x = '3';
-        lcd.clear();
-        lcd.print("hi!");
     }else if(row == 2){
         //6
         x = '6';
@@ -170,4 +182,10 @@ void isr_c4(void){
         x = '*';
     }
     //if row == 0, key is *. No use for * in this project.
+}
+
+void decrement(void){
+    //set up bare metal event queues to handle changing prints to lcd ??????
+    //dec by 1 second
+    //reprint new time
 }
