@@ -14,12 +14,12 @@ The user will used the keypad to input a value for a timer, an LED will flash wh
 Required Materials
 --------------------
 -Nucleo L4R5ZI  
--Micro USB cable   
--Jumpers   
+-USB a to Micro USB B cable   
+-16 male/male jumpers   
 -Keypad   
--LCD   
--4 external LEDs   
--6 Resistors   
+-16x2 1802 model LCD (comes with male/male jumper adaptor)   
+-7 external LEDs   
+-7 Resistors   
 -Breadboard   
 
 --------------------
@@ -40,11 +40,11 @@ This file implements all subproblems of the count-down alarm system. Currently, 
 ----------
 Things Declared
 ----------
-volatile char x which is currently used for testing ISRs.
-int row counter.
-int accumulator for the timer value.
-4 InterruptIn: one for each column of the keypad using pins PC8-11.
-4 void ISR functions, one for each column interrupt.
+volatile char x which is currently used for testing ISRs.  
+int row counter.  
+int accumulator for the timer value.  
+4 InterruptIn: one for each column of the keypad using pins PC8-11.  
+4 void ISR functions, one for each column interrupt.  
 
 
 ----------
@@ -55,9 +55,9 @@ Interrupt API -- InterruptIn, .rise()
 ----------
 Custom Functions
 ----------
-Void ISR functions mentioned above:
-void isr_c1(void), 
-void isr_c2(void), 
-void isr_c3(void), 
-void isr_c4(void). 
+Void ISR functions mentioned above:  
+void isr_c1(void),   
+void isr_c2(void),   
+void isr_c3(void),   
+void isr_c4(void).   
 These currently only have testing values and basic conditionals set up to determine key value based on the value in row.
