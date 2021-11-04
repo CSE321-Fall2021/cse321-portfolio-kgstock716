@@ -1,26 +1,26 @@
 -------------------
 About
 -------------------
-Project Description: C++ program for a count-down alarm system
-Contribitor List: Katherine Stock
+Project Description: C++ program for a count-down timer system  
+Contribitor List: Katherine Stock  
 
 
 --------------------
 Features
 --------------------
-The user will used the keypad to input a value for a timer, an LED will flash when a value is input. They can press 'D' to input the value, 'A' to start the timer, 'B' to stop/turn off the timer. The time remaining once set will be displayed on the external LCD. Once the time is up, the LCD will display time passed and many LEDs will light up.
+The user will used the keypad to input a value for a timer, an LED will flash when a value is input. They can press 'D' to input the value, 'A' to start the timer, 'B' to stop/turn off the timer. The time remaining once set will be displayed on the external LCD. Once the time is up, the LCD will display time passed and many LEDs will light up.  
 
 --------------------
 Required Materials
 --------------------
--Nucleo L4R5ZI 
--Micro USB cable 
--Jumpers 
--Keypad 
--LCD 
--4 external LEDs 
--6 Resistors 
--Breadboard 
+-Nucleo L4R5ZI  
+-Micro USB cable   
+-Jumpers   
+-Keypad   
+-LCD   
+-4 external LEDs   
+-6 Resistors   
+-Breadboard   
 
 --------------------
 Resources and References
