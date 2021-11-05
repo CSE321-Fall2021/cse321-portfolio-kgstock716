@@ -129,7 +129,7 @@ int main()
             GPIOD->ODR &= ~(0x40); 
         }
 
-        thread_sleep_for(175); //account for switch bounce by waiting 175ms before moving on to poll the next row
+        thread_sleep_for(100); //account for switch bounce by waiting 100ms before moving on to poll the next row
         row = row + 1;
         row %= 4;
 
@@ -242,10 +242,10 @@ void isr_c1(void){
         }
     }else if(row == 0){
         //D
-        //input time
-        if(countUp == false){
+        //input time if in starting mode, otherwise do nothing
+        if(state == CDStart){
             state = CDKeypad;
-        }else{
+        }else if(state == CUStart){
             state = CUKeypad;
         }
     }else{
