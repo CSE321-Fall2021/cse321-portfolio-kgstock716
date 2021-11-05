@@ -26,7 +26,7 @@ Required Materials
 Resources and References
 --------------------
 Lecture code 10/6  
-Ticker Documentation -- https://os.mbed.com/docs/mbed-os/v6.15/apis/ticker.html
+Ticker Documentation -- https://os.mbed.com/docs/mbed-os/v6.15/apis/ticker.html  
 Interrupt Documentation -- https://os.mbed.com/docs/mbed-os/v6.15/apis/interruptin.html  
 
 --------------------
