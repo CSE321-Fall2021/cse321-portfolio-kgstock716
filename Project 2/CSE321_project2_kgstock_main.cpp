@@ -9,7 +9,7 @@
   * Outputs: 7 external LEDs, LCD 
   * 
   * Constraints: Bounce, communication with Keypad and LCD
-  * References: 10/6 Lecture code, Ticker documentation - https://os.mbed.com/docs/mbed-os/v6.15/apis/ticker.html 
+  * References: 10/6 Lecture code, Ticker documentation - https://os.mbed.com/docs/mbed-os/v6.15/apis/ticker.html, Interrupt documentation - https://os.mbed.com/docs/mbed-os/v6.15/apis/interruptin.html 
   * 
   */ 
 
