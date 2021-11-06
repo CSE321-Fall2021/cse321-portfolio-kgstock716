@@ -47,7 +47,7 @@ This file implements all subproblems of the count-down timer system. The file fo
 ----------
 Things Declared
 ----------
-#Variables/Objects#
+ Variables/Objects  
 * 8 defined integer variables to represent the different states.  
 * Integer row counter used for polling the keypad rows and determining what key in each column was pressed.  
 * Integers mins, secs, cuMins, cuSecs, storedM, and storedS all used to store values related to the time and are initialized to 0. mins and secs are populated when the user inputs values, storedM and storedS are used so that the LCD display only updates when change in time is detected, cuMins and cuSecs store the time passed in count-up mode. These two variables are incremented until they equal mins and secs; mins and secs are directly decremented in count-down mode.
