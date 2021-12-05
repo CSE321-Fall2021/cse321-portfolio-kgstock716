@@ -16,25 +16,45 @@
 #include "mbed.h"
 #include "DHT.h"
 #include "DigitDisplay.h"
+#include "PinNames.h"
 #include <cstdio>
 
 
 /** Sensor reads humidity 20%-90%, temperature 0 celsius (32F) to 50 celsius (122F)
   * Weather Conditions:
-  * Snowy (White LED) -- 90% humidity, 0C temperature (32F)
-  * Cold (Blue LED) -- <90% humidity, 0C - 5C (32F - 41F)
-  * Moderate (Yellow LED) -- <90% humidity, 5C - 16C (41F - 60.8F)
-  * Hot (Red LED) -- <90% humidity, 16C - 50C (60.8F - 122F)
-  * Rainy (Green) -- 90% humidity, >0C temperature (>32F)
+  * Snowy (White LED - PC8) -- 90% humidity, 0C temperature (32F)
+  * Cold (Blue LED - PC9) -- <90% humidity, 0C - 5C (32F - 41F)
+  * Moderate (Yellow LED - PC10) -- <90% humidity, 5C - 16C (41F - 60.8F)
+  * Hot (Red LED - PC11) -- <90% humidity, 16C - 50C (60.8F - 122F)
+  * Rainy (Green LED - PC12) -- 90% humidity, >0C temperature (>32F)
   */ 
 
 
+//define weather variables to track state easily
+#define SNOWY 1
+#define COLD 2
+#define MODERATE 3
+#define HOT 4
+#define RAINY 5
+#define START 0
+
+
+//TODO: Integrate schedule, threading, event queue, ISR
+
+
+int state = 0;
+int tempF;
+int humidity;
 
 //Establish DHT11 as an input
-DHT11 sensor(PC_8);
+DHT11 sensor(PC_6);
 
 //Establish Seven Segment Display as an output
-DigitDisplay(PD_11, PD_12);
+DigitDisplay display(PD_0, PD_1);
+
+//Establish Watchdog and timeout
+Watchdog &watchdog = Watchdog::get_instance();
+const uint32_t TIMEOUT_MS = 6000; //if watchdog fails to get fed for 2 rounds of DHT reading, return to start state
 
 //Establish an isr for the DHT to use
 void isr_DHT(void);
@@ -45,14 +65,70 @@ Ticker t;
 // main() runs in its own thread in the OS
 int main()
 {
+    RCC->AHB2ENR |= 0x4; //enable register clock -- using port C for colored LEDs, PC8, 9, 10, 11, 12
+    //Next two lines set PC_8,9,10,11,12 to output mode
+    GPIOC->MODER |= 0x5540000; //set second bits to 1 -- 0101 0101 0100 0000 0000 0000 0000
+    GPIOC->MODER |= 0xAA8000; //set first bits to 0 -- 1010 1010 1000 0000 0000 0000
+
+    display.on(); //turn on 7 segment display
+
+    watchdog.start(TIMEOUT_MS); //start watchdog with 5000 ms timeout
 
     while (true) {
-        
+
+        switch (state) {
+            case SNOWY:
+                //condidtions consistent with snow
+                //White LED PC8
+                GPIOC->ODR &= ~(0x1F00); //all LEDs off
+                GPIOC->ODR |= 0x100; //PC8 on
+                //7 segment displays 1
+                display.clear();
+                display.write(1);
+            case COLD:
+                //Blue LED PC9
+                GPIOC->ODR &= ~(0x1F00); //all LEDs off
+                GPIOC->ODR |= 0x200; //PC9 on
+                //7 segment displays 2
+                display.clear();
+                display.write(2);
+            case MODERATE:
+                //Yellow LED PC10
+                GPIOC->ODR &= ~(0x1F00); //all LEDs off
+                GPIOC->ODR |= 0x400; //PC10 on
+                //7 segment displays 3
+                display.clear();
+                display.write(3);
+            case HOT:
+                //Red LED PC11
+                GPIOC->ODR &= ~(0x1F00); //all LEDs off
+                GPIOC->ODR |= 0x800; //PC11 on
+                //7 segment displays 4
+                display.clear();
+                display.write(4);
+            case RAINY:
+                //Green LED PC12
+                GPIOC->ODR &= ~(0x1F00); //all LEDs off
+                GPIOC->ODR |= 0x1000; //PC12 on
+                //7 segment displays 5
+                display.clear();
+                display.write(5);
+            default:
+                //reset to starting safe state and clear 7 segment and turn off all lights
+                state = START;
+                display.clear();
+                GPIOC->ODR &= ~(0x1F00);
+        }
 
     }
     return 0;
 }
 
 void isr_DHT(void){
-    
+    if(sensor.read() == DHTLIB_OK){
+        //if DHT reads ok, update values and feed watchdog
+        tempF = sensor.getFahrenheit();
+        humidity = sensor.getHumidity();
+        watchdog.kick();
+    }
 }
