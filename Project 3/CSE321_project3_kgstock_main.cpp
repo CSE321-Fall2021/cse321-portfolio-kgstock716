@@ -56,6 +56,9 @@ Watchdog &watchdog = Watchdog::get_instance();
 
 const uint32_t TIMEOUT_MS = 9000; //if watchdog fails to get fed for 3 rounds of DHT reading, return to start state
 
+//Establish an isr for setting the flag to read from the sensor, read cannot be done in an interrupt
+void isr_flag(void);
+
 //Establish an isr for the DHT to use
 void isr_DHT(void);
 
@@ -64,15 +67,17 @@ void isr_ticker(void);
 
 int ret;
 char x;
-//establish ticker for timing piece
+
+//establish ticker for timing piece and tickerflag to trigger hardware read
 Ticker t;
+volatile bool tickerFlag = 0;
 
 //establish eventqueue for scheduling and working with timer for 3sec hardware reads, uses a thread for each event
 EventQueue queue;
 
 int main()
 {
-    t.attach(&isr_DHT, 5000ms); //attatch function to work with EventQueue that will be called every 3 seconds
+    t.attach(&isr_flag, 10000ms); //attatch function to work with EventQueue that will be called every 3 seconds
 
     RCC->AHB2ENR |= 0x4; //enable register clock -- using port C for colored LEDs, PC8, 9, 10, 11, 12
     //Next two lines set PC_8,9,10,11,12 to output mode
@@ -84,14 +89,25 @@ int main()
     //watchdog.start(TIMEOUT_MS); //start watchdog with 9000 ms timeout
 
     while (true) {
-        //state = RAINY;
-        //display.write(8);
-        //printf("hi");
-        //GPIOC->ODR |= 0x1000; //PC12 on
-        printf("%c\n",x);
-        printf("%d\n",ret);
+        if(tickerFlag){
+            tickerFlag = 0;
+            printf("%d\n",ret);
+            ret = sensor.read();
+            if(ret == DHTLIB_OK || ret == DHTLIB_ERROR_CHECKSUM){
+                printf("Temp: %d\n", (int)sensor.getFahrenheit());
+                printf("Hum: %d\n", sensor.getHumidity());
+                queue.event(isr_DHT);
+                queue.dispatch_once();
+            }
+        }
+
+        // tempF = sensor.getFahrenheit();
+        // humidity = sensor.getHumidity();
+        // printf("%c\n",x);
+
+        // printf("Temp: %d\n", tempF);
+        // printf("Hum: %d\n", humidity);
         if(state == SNOWY) {
-            x= 's';
                 //condidtions consistent with snow
                 //White LED PC8
                 GPIOC->ODR &= ~(0x1F00); //all LEDs off
@@ -142,32 +158,33 @@ int main()
     return 0;
 }
 
+void isr_flag(void){
+    tickerFlag = 1;
+}
+
 void isr_DHT(void){
-    ret = sensor.read();
-    // if(sensor.read() == DHTLIB_OK){
-    //     x = 'd';
-    //     //if DHT reads ok, update values and feed watchdog
-    //     tempF = sensor.getFahrenheit();
-    //     humidity = sensor.getHumidity();
-    //     watchdog.kick();
+        x = 'd';
+        //if DHT reads ok, update values and feed watchdog
+        tempF = (int)sensor.getFahrenheit();
+        humidity = sensor.getHumidity();
+        watchdog.kick();
 
-    //     if(humidity>=90){
-    //         if(tempF<=32){
-    //             state = SNOWY;
-    //         }else{
-    //             state = RAINY;
-    //         }
-    //     }else{
-    //         if(tempF>=32 && tempF<41){
-    //             state = COLD;
-    //         }else if(tempF>=41 && tempF<60.8){
-    //             state = MODERATE;
-    //         }else if(tempF>= 60.8){
-    //             state = HOT;
-    //         }
-    //     }
+        if(humidity>=90){
+            if(tempF<=32){
+                state = SNOWY;
+            }else{
+                state = RAINY;
+            }
+        }else{
+            if(tempF>=32 && tempF<41){
+                state = COLD;
+            }else if(tempF>=41 && tempF<60.8){
+                state = MODERATE;
+            }else if(tempF>= 60.8){
+                state = HOT;
+            }
+        }
 
-    // }
 }
 
 void isr_ticker(void){
