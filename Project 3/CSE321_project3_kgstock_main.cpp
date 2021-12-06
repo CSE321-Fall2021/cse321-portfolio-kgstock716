@@ -48,7 +48,7 @@ int humidity;
 //Establish DHT11 as an input
 DHT11 sensor(PC_6);
 
-//Establish Seven Segment Display as an output
+//Establish Seven Segment Display as an output, pd0 - clk, pd1 - dio
 DigitDisplay display(PD_0, PD_1);
 
 //Establish Watchdog and timeout
@@ -62,6 +62,8 @@ void isr_DHT(void);
 //Establish an isr for the eventqueue
 void isr_ticker(void);
 
+int ret;
+char x;
 //establish ticker for timing piece
 Ticker t;
 
@@ -70,20 +72,26 @@ EventQueue queue;
 
 int main()
 {
-    t.attach(&isr_ticker, 3000ms); //attatch function to work with EventQueue that will be called every 3 seconds
+    t.attach(&isr_DHT, 5000ms); //attatch function to work with EventQueue that will be called every 3 seconds
 
     RCC->AHB2ENR |= 0x4; //enable register clock -- using port C for colored LEDs, PC8, 9, 10, 11, 12
     //Next two lines set PC_8,9,10,11,12 to output mode
-    GPIOC->MODER |= 0x5540000; //set second bits to 1 -- 0101 0101 0100 0000 0000 0000 0000
-    GPIOC->MODER |= 0xAA8000; //set first bits to 0 -- 1010 1010 1000 0000 0000 0000
+    GPIOC->MODER |= 0x1550000; //set second bits to 1 -- 0001 0101 0101 0000 0000 0000 0000
+    GPIOC->MODER &= ~(0x2AA0000); //set first bits to 0 -- 10 1010 1010 0000 0000 0000 0000
 
     display.on(); //turn on 7 segment display
 
-    watchdog.start(TIMEOUT_MS); //start watchdog with 9000 ms timeout
+    //watchdog.start(TIMEOUT_MS); //start watchdog with 9000 ms timeout
 
     while (true) {
-        switch (state) {
-            case SNOWY:
+        //state = RAINY;
+        //display.write(8);
+        //printf("hi");
+        //GPIOC->ODR |= 0x1000; //PC12 on
+        printf("%c\n",x);
+        printf("%d\n",ret);
+        if(state == SNOWY) {
+            x= 's';
                 //condidtions consistent with snow
                 //White LED PC8
                 GPIOC->ODR &= ~(0x1F00); //all LEDs off
@@ -91,35 +99,39 @@ int main()
                 //7 segment displays 1
                 display.clear();
                 display.write(1);
-            case COLD:
+         }else if(state == COLD){
+                x = 'c';
                 //Blue LED PC9
                 GPIOC->ODR &= ~(0x1F00); //all LEDs off
                 GPIOC->ODR |= 0x200; //PC9 on
                 //7 segment displays 2
                 display.clear();
                 display.write(2);
-            case MODERATE:
+         }else if(state == MODERATE){
+             x = 'm';
                 //Yellow LED PC10
                 GPIOC->ODR &= ~(0x1F00); //all LEDs off
                 GPIOC->ODR |= 0x400; //PC10 on
                 //7 segment displays 3
                 display.clear();
                 display.write(3);
-            case HOT:
+         }else if(state == HOT){
+             x = 'h';
                 //Red LED PC11
                 GPIOC->ODR &= ~(0x1F00); //all LEDs off
                 GPIOC->ODR |= 0x800; //PC11 on
                 //7 segment displays 4
                 display.clear();
                 display.write(4);
-            case RAINY:
+         }else if(state == RAINY){
+             x = 'r';
                 //Green LED PC12
                 GPIOC->ODR &= ~(0x1F00); //all LEDs off
                 GPIOC->ODR |= 0x1000; //PC12 on
                 //7 segment displays 5
                 display.clear();
                 display.write(5);
-            default:
+         }else{
                 //reset to starting safe state and clear 7 segment and turn off all lights
                 state = START;
                 display.clear();
@@ -131,32 +143,35 @@ int main()
 }
 
 void isr_DHT(void){
-    if(sensor.read() == DHTLIB_OK){
-        //if DHT reads ok, update values and feed watchdog
-        tempF = sensor.getFahrenheit();
-        humidity = sensor.getHumidity();
-        watchdog.kick();
+    ret = sensor.read();
+    // if(sensor.read() == DHTLIB_OK){
+    //     x = 'd';
+    //     //if DHT reads ok, update values and feed watchdog
+    //     tempF = sensor.getFahrenheit();
+    //     humidity = sensor.getHumidity();
+    //     watchdog.kick();
 
-        if(humidity>=90){
-            if(tempF<=32){
-                state = SNOWY;
-            }else{
-                state = RAINY;
-            }
-        }else{
-            if(tempF>=32 && tempF<41){
-                state = COLD;
-            }else if(tempF>=41 && tempF<60.8){
-                state = MODERATE;
-            }else if(tempF>= 60.8){
-                state = HOT;
-            }
-        }
+    //     if(humidity>=90){
+    //         if(tempF<=32){
+    //             state = SNOWY;
+    //         }else{
+    //             state = RAINY;
+    //         }
+    //     }else{
+    //         if(tempF>=32 && tempF<41){
+    //             state = COLD;
+    //         }else if(tempF>=41 && tempF<60.8){
+    //             state = MODERATE;
+    //         }else if(tempF>= 60.8){
+    //             state = HOT;
+    //         }
+    //     }
 
-    }
+    // }
 }
 
 void isr_ticker(void){
+    x = 't';
     //add one DHT read to the queue and then dispatch it to update, this happens every 3 seconds
     //EventQueue protects the critical section of tempF and humidity
     queue.event(isr_DHT);
