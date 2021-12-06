@@ -54,7 +54,7 @@ DigitDisplay display(PD_0, PD_1);
 //Establish Watchdog and timeout
 Watchdog &watchdog = Watchdog::get_instance();
 
-const uint32_t TIMEOUT_MS = 9000; //if watchdog fails to get fed for 3 rounds of DHT reading, return to start state
+const uint32_t TIMEOUT_MS = 30000; //if watchdog fails to get fed for 3 rounds of DHT reading, return to start state
 
 //Establish an isr for setting the flag to read from the sensor, read cannot be done in an interrupt
 void isr_flag(void);
@@ -73,13 +73,21 @@ Ticker t;
 volatile bool tickerFlag = 0;
 
 //establish eventqueue for scheduling and working with timer for 3sec hardware reads, uses a thread for each event
-EventQueue queue;
+EventQueue queue(32*EVENTS_EVENT_SIZE);
+
+//Create thread that will connect to the queue
+Thread qThread;
 
 int main()
 {
-    t.attach(&isr_flag, 10000ms); //attatch function to work with EventQueue that will be called every 3 seconds
+    //attatch function to work with EventQueue that will be called every 10 seconds
+    t.attach(&isr_flag, 10000ms); 
+
+    //attatch thread to queue, dispatch forever the events that will be added in DHT ISR
+    qThread.start(callback(&queue, &EventQueue::dispatch_forever));
 
     RCC->AHB2ENR |= 0x4; //enable register clock -- using port C for colored LEDs, PC8, 9, 10, 11, 12
+    
     //Next two lines set PC_8,9,10,11,12 to output mode
     GPIOC->MODER |= 0x1550000; //set second bits to 1 -- 0001 0101 0101 0000 0000 0000 0000
     GPIOC->MODER &= ~(0x2AA0000); //set first bits to 0 -- 10 1010 1010 0000 0000 0000 0000
@@ -97,16 +105,10 @@ int main()
                 printf("Temp: %d\n", (int)sensor.getFahrenheit());
                 printf("Hum: %d\n", sensor.getHumidity());
                 queue.event(isr_DHT);
-                queue.dispatch_once();
+                watchdog.kick();
             }
         }
 
-        // tempF = sensor.getFahrenheit();
-        // humidity = sensor.getHumidity();
-        // printf("%c\n",x);
-
-        // printf("Temp: %d\n", tempF);
-        // printf("Hum: %d\n", humidity);
         if(state == SNOWY) {
                 //condidtions consistent with snow
                 //White LED PC8
@@ -116,7 +118,6 @@ int main()
                 display.clear();
                 display.write(1);
          }else if(state == COLD){
-                x = 'c';
                 //Blue LED PC9
                 GPIOC->ODR &= ~(0x1F00); //all LEDs off
                 GPIOC->ODR |= 0x200; //PC9 on
@@ -124,7 +125,6 @@ int main()
                 display.clear();
                 display.write(2);
          }else if(state == MODERATE){
-             x = 'm';
                 //Yellow LED PC10
                 GPIOC->ODR &= ~(0x1F00); //all LEDs off
                 GPIOC->ODR |= 0x400; //PC10 on
@@ -132,7 +132,6 @@ int main()
                 display.clear();
                 display.write(3);
          }else if(state == HOT){
-             x = 'h';
                 //Red LED PC11
                 GPIOC->ODR &= ~(0x1F00); //all LEDs off
                 GPIOC->ODR |= 0x800; //PC11 on
@@ -140,7 +139,6 @@ int main()
                 display.clear();
                 display.write(4);
          }else if(state == RAINY){
-             x = 'r';
                 //Green LED PC12
                 GPIOC->ODR &= ~(0x1F00); //all LEDs off
                 GPIOC->ODR |= 0x1000; //PC12 on
@@ -163,11 +161,10 @@ void isr_flag(void){
 }
 
 void isr_DHT(void){
-        x = 'd';
-        //if DHT reads ok, update values and feed watchdog
+        //ISR is run off of the EventQueue
+        //allows for safe update critical section values tempF, humidity, state
         tempF = (int)sensor.getFahrenheit();
         humidity = sensor.getHumidity();
-        watchdog.kick();
 
         if(humidity>=90){
             if(tempF<=32){
@@ -185,12 +182,4 @@ void isr_DHT(void){
             }
         }
 
-}
-
-void isr_ticker(void){
-    x = 't';
-    //add one DHT read to the queue and then dispatch it to update, this happens every 3 seconds
-    //EventQueue protects the critical section of tempF and humidity
-    queue.event(isr_DHT);
-    queue.dispatch_once();
 }
