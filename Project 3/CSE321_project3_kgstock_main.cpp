@@ -2,21 +2,20 @@
   * Author: Katherine Stock (kgstock)
   * 
   * File Purpose: Weather predictor and item carry along suggestor
-  * Modules: 
+  * Modules: isr_DHT, isr_ticker
   * Assignment: CSE321 Project 3 
   *
-  * Inputs:  
-  * Outputs: 
+  * Inputs: DHT11
+  * Outputs: LEDs, 7 segment display
   * 
-  * Constraints:
-  * References: Watchdog Documentation -- https://os.mbed.com/docs/mbed-os/v6.15/apis/watchdog.html, Thread Documentation -- https://os.mbed.com/docs/mbed-os/v6.15/apis/thread.html, DHT11 Documentation -- https://components101.com/sites/default/files/component_datasheet/DHT11-Temperature-Sensor.pdf, Seven Segment Documentation -- https://components101.com/displays/tm1637-grove-4-digit-display-module
+  * Constraints: 
+  * References: Watchdog Documentation -- https://os.mbed.com/docs/mbed-os/v6.15/apis/watchdog.html, Thread Documentation -- https://os.mbed.com/docs/mbed-os/v6.15/apis/thread.html, DHT11 Documentation -- https://components101.com/sites/default/files/component_datasheet/DHT11-Temperature-Sensor.pdf, Seven Segment Documentation -- https://components101.com/displays/tm1637-grove-4-digit-display-module, EventQueue Documentation -- https://os.mbed.com/docs/mbed-os/v6.15/apis/eventqueue.html
   * Weather Condition Decision References: https://sites.psu.edu/siowfa14/2014/10/24/why-does-humidity-affect-snow/#:~:text=When%20the%20humidity%20is%20high%20there%20is%20a%20large%20amount,then%20the%20pressure%20also%20decreases.&text=In%20relation%20to%20snow%2C%20when,is%20high%20the%20snow%20melts.
   */ 
 
 #include "mbed.h"
 #include "DHT.h"
 #include "DigitDisplay.h"
-#include "PinNames.h"
 #include <cstdio>
 
 
@@ -39,10 +38,10 @@
 #define START 0
 
 
-//TODO: Integrate schedule, threading, event queue, ISR
+//TODO: testing
 
 
-int state = 0;
+int state = START;
 int tempF;
 int humidity;
 
@@ -54,17 +53,25 @@ DigitDisplay display(PD_0, PD_1);
 
 //Establish Watchdog and timeout
 Watchdog &watchdog = Watchdog::get_instance();
-const uint32_t TIMEOUT_MS = 6000; //if watchdog fails to get fed for 2 rounds of DHT reading, return to start state
+
+const uint32_t TIMEOUT_MS = 9000; //if watchdog fails to get fed for 3 rounds of DHT reading, return to start state
 
 //Establish an isr for the DHT to use
 void isr_DHT(void);
 
+//Establish an isr for the eventqueue
+void isr_ticker(void);
+
 //establish ticker for timing piece
 Ticker t;
 
-// main() runs in its own thread in the OS
+//establish eventqueue for scheduling and working with timer for 3sec hardware reads, uses a thread for each event
+EventQueue queue;
+
 int main()
 {
+    t.attach(&isr_ticker, 3000ms); //attatch function to work with EventQueue that will be called every 3 seconds
+
     RCC->AHB2ENR |= 0x4; //enable register clock -- using port C for colored LEDs, PC8, 9, 10, 11, 12
     //Next two lines set PC_8,9,10,11,12 to output mode
     GPIOC->MODER |= 0x5540000; //set second bits to 1 -- 0101 0101 0100 0000 0000 0000 0000
@@ -72,10 +79,9 @@ int main()
 
     display.on(); //turn on 7 segment display
 
-    watchdog.start(TIMEOUT_MS); //start watchdog with 5000 ms timeout
+    watchdog.start(TIMEOUT_MS); //start watchdog with 9000 ms timeout
 
     while (true) {
-
         switch (state) {
             case SNOWY:
                 //condidtions consistent with snow
@@ -130,5 +136,29 @@ void isr_DHT(void){
         tempF = sensor.getFahrenheit();
         humidity = sensor.getHumidity();
         watchdog.kick();
+
+        if(humidity>=90){
+            if(tempF<=32){
+                state = SNOWY;
+            }else{
+                state = RAINY;
+            }
+        }else{
+            if(tempF>=32 && tempF<41){
+                state = COLD;
+            }else if(tempF>=41 && tempF<60.8){
+                state = MODERATE;
+            }else if(tempF>= 60.8){
+                state = HOT;
+            }
+        }
+
     }
+}
+
+void isr_ticker(void){
+    //add one DHT read to the queue and then dispatch it to update, this happens every 3 seconds
+    //EventQueue protects the critical section of tempF and humidity
+    queue.event(isr_DHT);
+    queue.dispatch_once();
 }
