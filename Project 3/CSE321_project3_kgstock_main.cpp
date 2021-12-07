@@ -2,13 +2,13 @@
   * Author: Katherine Stock (kgstock)
   * 
   * File Purpose: Weather predictor and item carry along suggestor
-  * Modules: isr_DHT, isr_ticker
+  * Modules: isr_DHT, isr_flag
   * Assignment: CSE321 Project 3 
   *
   * Inputs: DHT11
   * Outputs: LEDs, 7 segment display
   * 
-  * Constraints: 
+  * Constraints: Sensor must only be read every 2 seconds maximum
   * References: Watchdog Documentation -- https://os.mbed.com/docs/mbed-os/v6.15/apis/watchdog.html, Thread Documentation -- https://os.mbed.com/docs/mbed-os/v6.15/apis/thread.html, DHT11 Documentation -- https://components101.com/sites/default/files/component_datasheet/DHT11-Temperature-Sensor.pdf, Seven Segment Documentation -- https://components101.com/displays/tm1637-grove-4-digit-display-module, EventQueue Documentation -- https://os.mbed.com/docs/mbed-os/v6.15/apis/eventqueue.html
   * Weather Condition Decision References: https://sites.psu.edu/siowfa14/2014/10/24/why-does-humidity-affect-snow/#:~:text=When%20the%20humidity%20is%20high%20there%20is%20a%20large%20amount,then%20the%20pressure%20also%20decreases.&text=In%20relation%20to%20snow%2C%20when,is%20high%20the%20snow%20melts.
   */ 
@@ -57,9 +57,6 @@ void isr_flag(void);
 
 //Establish an isr for the DHT to use
 void isr_DHT(void);
-
-//Establish an isr for the eventqueue
-void isr_ticker(void);
 
 //return integer to store condition of the sensor after read, ok or error
 volatile int ret;
