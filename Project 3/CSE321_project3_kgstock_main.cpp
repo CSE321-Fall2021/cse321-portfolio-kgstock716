@@ -21,11 +21,11 @@
 
 /** Sensor reads humidity 20%-90%, temperature 0 celsius (32F) to 50 celsius (122F)
   * Weather Conditions:
-  * Snowy (White LED - PC8) -- 90% humidity, 0C temperature (32F)
-  * Cold (Blue LED - PC9) -- <90% humidity, 0C - 5C (32F - 41F)
-  * Moderate (Yellow LED - PC10) -- <90% humidity, 5C - 16C (41F - 60.8F)
-  * Hot (Red LED - PC11) -- <90% humidity, 16C - 50C (60.8F - 122F)
-  * Rainy (Green LED - PC12) -- 90% humidity, >0C temperature (>32F)
+  * Snowy (White LED - PC8) -- >85% humidity, 0C temperature (32F)
+  * Cold (Blue LED - PC9) -- <90% humidity, 0C - 5C (32F - 60F)
+  * Moderate (Yellow LED - PC10) -- <90% humidity, 5C - 16C (60F - 80F)
+  * Hot (Red LED - PC11) -- <90% humidity, 16C - 50C (80F - 122F)
+  * Rainy (Green LED - PC12) -- >85% humidity, >0C temperature (>32F)
   */ 
 
 
@@ -36,9 +36,6 @@
 #define HOT 4
 #define RAINY 5
 #define START 0
-
-
-//TODO: testing
 
 
 int state = START;
@@ -53,8 +50,7 @@ DigitDisplay display(PD_0, PD_1);
 
 //Establish Watchdog and timeout
 Watchdog &watchdog = Watchdog::get_instance();
-
-const uint32_t TIMEOUT_MS = 30000; //if watchdog fails to get fed for 3 rounds of DHT reading, return to start state
+const uint32_t TIMEOUT_MS = 15000; //if watchdog fails to get fed for 3 rounds of DHT reading, return to start state
 
 //Establish an isr for setting the flag to read from the sensor, read cannot be done in an interrupt
 void isr_flag(void);
@@ -65,15 +61,16 @@ void isr_DHT(void);
 //Establish an isr for the eventqueue
 void isr_ticker(void);
 
-int ret;
-char x;
+//return integer to store condition of the sensor after read, ok or error
+volatile int ret;
 
-//establish ticker for timing piece and tickerflag to trigger hardware read
-Ticker t;
+//establish ticker t1 for timing DHT11 read and ticker t2 to time critical section update with EventQueue, tickerflag tiggered when sensor should be read (no more than every 2 seconds)
+Ticker t1;
+Ticker t2;
 volatile bool tickerFlag = 0;
 
 //establish eventqueue for scheduling and working with timer for 3sec hardware reads, uses a thread for each event
-EventQueue queue(32*EVENTS_EVENT_SIZE);
+EventQueue q(32 * EVENTS_EVENT_SIZE);
 
 //Create thread that will connect to the queue
 Thread qThread;
@@ -81,12 +78,14 @@ Thread qThread;
 int main()
 {
     //attatch function to work with EventQueue that will be called every 10 seconds
-    t.attach(&isr_flag, 10000ms); 
+    t1.attach(&isr_flag, 5000ms); 
+    t2.attach(&isr_DHT, 5000ms);
 
     //attatch thread to queue, dispatch forever the events that will be added in DHT ISR
-    qThread.start(callback(&queue, &EventQueue::dispatch_forever));
+    qThread.start(callback(&q, &EventQueue::dispatch_forever));
 
-    RCC->AHB2ENR |= 0x4; //enable register clock -- using port C for colored LEDs, PC8, 9, 10, 11, 12
+    //enable register clock -- using port C for colored LEDs, PC8, 9, 10, 11, 12
+    RCC->AHB2ENR |= 0x4; 
     
     //Next two lines set PC_8,9,10,11,12 to output mode
     GPIOC->MODER |= 0x1550000; //set second bits to 1 -- 0001 0101 0101 0000 0000 0000 0000
@@ -94,17 +93,17 @@ int main()
 
     display.on(); //turn on 7 segment display
 
-    //watchdog.start(TIMEOUT_MS); //start watchdog with 9000 ms timeout
+    watchdog.start(TIMEOUT_MS); //start watchdog with 15000 ms timeout
 
     while (true) {
         if(tickerFlag){
+            //immediately turn off flag to prevent multiple sensor reads
             tickerFlag = 0;
-            printf("%d\n",ret);
             ret = sensor.read();
             if(ret == DHTLIB_OK || ret == DHTLIB_ERROR_CHECKSUM){
-                printf("Temp: %d\n", (int)sensor.getFahrenheit());
-                printf("Hum: %d\n", sensor.getHumidity());
-                queue.event(isr_DHT);
+                //sensor read returned okay, notify the watchdog
+                printf("Temp: %d\n", tempF);
+                printf("Hum: %d\n", humidity);
                 watchdog.kick();
             }
         }
@@ -115,35 +114,30 @@ int main()
                 GPIOC->ODR &= ~(0x1F00); //all LEDs off
                 GPIOC->ODR |= 0x100; //PC8 on
                 //7 segment displays 1
-                display.clear();
                 display.write(1);
          }else if(state == COLD){
                 //Blue LED PC9
                 GPIOC->ODR &= ~(0x1F00); //all LEDs off
                 GPIOC->ODR |= 0x200; //PC9 on
                 //7 segment displays 2
-                display.clear();
                 display.write(2);
          }else if(state == MODERATE){
                 //Yellow LED PC10
                 GPIOC->ODR &= ~(0x1F00); //all LEDs off
                 GPIOC->ODR |= 0x400; //PC10 on
                 //7 segment displays 3
-                display.clear();
                 display.write(3);
          }else if(state == HOT){
                 //Red LED PC11
                 GPIOC->ODR &= ~(0x1F00); //all LEDs off
                 GPIOC->ODR |= 0x800; //PC11 on
                 //7 segment displays 4
-                display.clear();
                 display.write(4);
          }else if(state == RAINY){
                 //Green LED PC12
                 GPIOC->ODR &= ~(0x1F00); //all LEDs off
                 GPIOC->ODR |= 0x1000; //PC12 on
                 //7 segment displays 5
-                display.clear();
                 display.write(5);
          }else{
                 //reset to starting safe state and clear 7 segment and turn off all lights
@@ -161,25 +155,28 @@ void isr_flag(void){
 }
 
 void isr_DHT(void){
-        //ISR is run off of the EventQueue
-        //allows for safe update critical section values tempF, humidity, state
+    //ISR is run off of the EventQueue
+    //allows for safe update critical section values tempF, humidity, state
+    if(tickerFlag && (ret == DHTLIB_OK || ret == DHTLIB_ERROR_CHECKSUM)){
+        //read and update DHT11 values
         tempF = (int)sensor.getFahrenheit();
         humidity = sensor.getHumidity();
 
-        if(humidity>=90){
+        //change state based on newly read information, state boundaries outlined below includes
+        if(humidity>=85){
             if(tempF<=32){
                 state = SNOWY;
             }else{
                 state = RAINY;
             }
         }else{
-            if(tempF>=32 && tempF<41){
+            if(tempF>=32 && tempF<60){
                 state = COLD;
-            }else if(tempF>=41 && tempF<60.8){
+            }else if(tempF>=60 && tempF<80){
                 state = MODERATE;
-            }else if(tempF>= 60.8){
+            }else if(tempF>= 80){
                 state = HOT;
             }
-        }
-
+        } 
+    }
 }
