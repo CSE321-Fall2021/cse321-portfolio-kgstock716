@@ -21,11 +21,11 @@
 
 /** Sensor reads humidity 20%-90%, temperature 0 celsius (32F) to 50 celsius (122F)
   * Weather Conditions:
-  * Snowy (White LED - PC8) -- >85% humidity, 0C temperature (32F)
-  * Cold (Blue LED - PC9) -- <90% humidity, 0C - 5C (32F - 60F)
-  * Moderate (Yellow LED - PC10) -- <90% humidity, 5C - 16C (60F - 80F)
-  * Hot (Red LED - PC11) -- <90% humidity, 16C - 50C (80F - 122F)
-  * Rainy (Green LED - PC12) -- >85% humidity, >0C temperature (>32F)
+  * Snowy (White LED - PC8) -- >85% humidity, 32F
+  * Cold (Blue LED - PC9) -- <85% humidity, 32F - 60F
+  * Moderate (Yellow LED - PC10) -- <85% humidity, 60F - 80F
+  * Hot (Red LED - PC11) -- <85% humidity, 80F - 122F
+  * Rainy (Green LED - PC12) -- >85% humidity, >32F
   */ 
 
 
@@ -97,8 +97,9 @@ int main()
             //immediately turn off flag to prevent multiple sensor reads
             tickerFlag = 0;
             ret = sensor.read();
-            if(ret == DHTLIB_OK || ret == DHTLIB_ERROR_CHECKSUM){
+            if(ret == DHTLIB_OK  || ret == DHTLIB_ERROR_CHECKSUM){
                 //sensor read returned okay, notify the watchdog
+                printf("status is %d\n", ret);
                 printf("Temp: %d\n", tempF);
                 printf("Hum: %d\n", humidity);
                 watchdog.kick();
