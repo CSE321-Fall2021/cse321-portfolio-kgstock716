@@ -58,6 +58,8 @@ void isr_flag(void);
 //Establish an isr for the DHT to use
 void isr_DHT(void);
 
+void isr_critical(void);
+
 //return integer to store condition of the sensor after read, ok or error
 volatile int ret;
 
@@ -66,7 +68,7 @@ Ticker t1;
 Ticker t2;
 volatile bool tickerFlag = 0;
 
-//establish eventqueue for scheduling and working with timer for 3sec hardware reads, uses a thread for each event
+//establish eventqueue for scheduling and working with timer for 5sec hardware reads, uses a thread for each event
 EventQueue q(32 * EVENTS_EVENT_SIZE);
 
 //Create thread that will connect to the queue
@@ -74,8 +76,10 @@ Thread qThread;
 
 int main()
 {
-    //attatch function to work with EventQueue that will be called every 10 seconds
+    //use flag based ISR to signal a new sensor read every 5 seconds
     t1.attach(&isr_flag, 5000ms); 
+
+    //attatch second ticker to work with eventqueue and update critical section
     t2.attach(&isr_DHT, 5000ms);
 
     //attatch thread to queue, dispatch forever the events that will be added in DHT ISR
@@ -91,8 +95,11 @@ int main()
     display.on(); //turn on 7 segment display
 
     watchdog.start(TIMEOUT_MS); //start watchdog with 15000 ms timeout
+    
 
     while (true) {
+        //add DHT update event to the queue, will be dispatched to safely update the critical section
+        q.event(isr_DHT);
         if(tickerFlag){
             //immediately turn off flag to prevent multiple sensor reads
             tickerFlag = 0;
