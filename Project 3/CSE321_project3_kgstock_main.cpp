@@ -69,7 +69,7 @@ Ticker t2;
 volatile bool tickerFlag = 0;
 
 //establish eventqueue for scheduling and working with timer for 5sec hardware reads, uses a thread for each event
-EventQueue q(32 * EVENTS_EVENT_SIZE);
+EventQueue q(320 * EVENTS_EVENT_SIZE);
 
 //Create thread that will connect to the queue
 Thread qThread;
@@ -99,7 +99,7 @@ int main()
 
     while (true) {
         //add DHT update event to the queue, will be dispatched to safely update the critical section
-        q.event(isr_DHT);
+        //q.event(isr_DHT);
         if(tickerFlag){
             //immediately turn off flag to prevent multiple sensor reads
             tickerFlag = 0;
@@ -110,6 +110,7 @@ int main()
                 printf("Temp: %d\n", tempF);
                 printf("Hum: %d\n", humidity);
                 watchdog.kick();
+                q.event(isr_DHT);
             }
         }
 
