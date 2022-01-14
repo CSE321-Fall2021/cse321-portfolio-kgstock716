@@ -10,4 +10,4 @@ Project 1 is focused on planning and good coding habits. Included are a correcte
 
 Project 2 is a C++ project to create a count-down alarm system using the Nucelo-L4R5ZI. The project includes a README, LCD Documentation, a report tracking progress and outlining specifics of the project, and the C++ code file.  
 
-Project 3 is a C++ project to create a weather predictor and essential items recommendor based on current humidity and temperature. Currently, the project includes a README and planning documents.
+Project 3 is a C++ project to create a weather predictor and essential items recommendor based on current humidity and temperature. The project includes a README, DHT11 and 7-segment display Documentation, a report tracking progress and outlining specifics of the project, a key for understanding system output, and the C++ code file.  
