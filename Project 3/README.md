@@ -17,10 +17,10 @@ Required Materials
 -USB a to Micro USB B cable   
 -14 male/male jumpers   
 -Seven-Segment display (with male/male jumper adaptor)  
--5 external LEDs (one of each color: White, Blue, Yellow, Red, Green)
--DHT11 temperature and humidity sensor 
--5 1kOhm Resistors   
--Breadboard   
+-5 external LEDs (one of each color: White, Blue, Yellow, Red, Green)  
+-DHT11 temperature and humidity sensor    
+-5 1kOhm Resistors      
+-Breadboard     
 
 --------------------
 Resources and References
