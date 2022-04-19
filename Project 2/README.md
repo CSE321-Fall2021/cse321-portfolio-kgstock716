@@ -58,7 +58,7 @@ Things Declared
 * CSE321_LCD lcd declares the lcd object being used to print results and prompt the user. The LCD is a 16x2 1802 so it is declared to have 16 columns, 2 rows, each character being 5x8 dots, SDA of PB9, and SCL of PB8 as required by the included documentation.
 * 4 InterruptIn: one for each column of the keypad using pins PC8-11. 
 * Ticker t, which is used to time the decrement/increment and LCD updates on each second.  
-#Functions
+ Functions
 * Void function timeChange which is attatched to the ticker. The function decides if the timer's job is done and changes state if so. Otherwise, the function decrements/increments in line with expected behavior of 1 mins = 60 seconds.  
 * 4 void ISR functions, one for each column interrupt, that will trigger the behavior associated with that key in the given state.  
 ----------
